@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Dashboard from '@/components/Dashboard';
 
 interface Event {
     id: string;
@@ -18,14 +19,17 @@ export default function Home() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [showForm, setShowForm] = useState(false);
+    const [activeTab, setActiveTab] = useState('events'); // 'events' or 'dashboard'
 
     const fetchEvents = async () => {
         try {
             setLoading(true);
+            setError('');
             const response = await fetch('/api/events');
 
             if (!response.ok) {
-                throw new Error('Failed to fetch events');
+                setError('Failed to fetch events');
+                return;
             }
 
             const result = await response.json();
@@ -34,6 +38,9 @@ export default function Home() {
                 setEvents(result.data);
             } else {
                 setEvents([]);
+                if (result.error) {
+                    setError(result.error);
+                }
             }
         } catch (err) {
             console.error('Error fetching events:', err);
@@ -55,7 +62,8 @@ export default function Home() {
             });
 
             if (!response.ok) {
-                throw new Error('Failed to create event');
+                const errorData = await response.json();
+                return { success: false, error: errorData.error || 'Failed to create event' };
             }
 
             const result = await response.json();
@@ -65,11 +73,12 @@ export default function Home() {
                 setShowForm(false);
                 return { success: true, event: result.data };
             } else {
-                throw new Error(result.error || 'Failed to create event');
+                return { success: false, error: result.error || 'Failed to create event' };
             }
         } catch (err) {
             console.error('Error creating event:', err);
-            return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            return { success: false, error: errorMessage };
         }
     };
 
@@ -92,30 +101,12 @@ export default function Home() {
         return colors[category] || 'bg-gray-100 text-gray-800';
     };
 
-    if (loading) {
+    if (loading && activeTab === 'events') {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
                     <p className="mt-4 text-gray-600">Loading events...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-                <div className="text-center bg-white p-8 rounded-2xl shadow-lg max-w-md">
-                    <div className="text-red-500 text-6xl mb-4">⚠️</div>
-                    <h2 className="text-xl font-bold text-gray-800 mb-2">Oops! Something went wrong</h2>
-                    <p className="text-gray-600 mb-6">{error}</p>
-                    <button
-                        onClick={fetchEvents}
-                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                    >
-                        Try Again
-                    </button>
                 </div>
             </div>
         );
@@ -131,68 +122,117 @@ export default function Home() {
                             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                                 EventFlow
                             </h1>
-                            <p className="text-gray-600 mt-1">Manage your events with ease</p>
+                            <p className="text-gray-600 mt-1">Professional Event Management System</p>
                         </div>
-                        <button
-                            onClick={() => setShowForm(!showForm)}
-                            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                        >
-                            {showForm ? '✕ Cancel' : '+ Create Event'}
-                        </button>
+                        <div className="flex gap-4">
+                            {/* Navigation Tabs */}
+                            <div className="flex bg-gray-100 rounded-lg p-1">
+                                <button
+                                    onClick={() => setActiveTab('events')}
+                                    className={`px-4 py-2 rounded-md transition-colors ${
+                                        activeTab === 'events'
+                                            ? 'bg-white text-blue-600 shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                                >
+                                    Events
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('dashboard')}
+                                    className={`px-4 py-2 rounded-md transition-colors ${
+                                        activeTab === 'dashboard'
+                                            ? 'bg-white text-blue-600 shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                                >
+                                    Dashboard
+                                </button>
+                            </div>
+
+                            {activeTab === 'events' && (
+                                <button
+                                    onClick={() => setShowForm(!showForm)}
+                                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                >
+                                    {showForm ? '✕ Cancel' : '+ Create Event'}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Main Content */}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Create Event Form */}
-                {showForm && (
-                    <div className="mb-8 animate-fade-in">
-                        <EventForm onCreateEvent={createEvent} onCancel={() => setShowForm(false)} />
-                    </div>
+                {activeTab === 'dashboard' ? (
+                    <Dashboard />
+                ) : (
+                    <>
+                        {/* Create Event Form */}
+                        {showForm && (
+                            <div className="mb-8 animate-fade-in">
+                                <EventForm onCreateEvent={createEvent} onCancel={() => setShowForm(false)} />
+                            </div>
+                        )}
+
+                        {/* Error Display */}
+                        {error && (
+                            <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+                                <div className="flex items-center">
+                                    <div className="text-red-600 font-medium">{error}</div>
+                                    <button
+                                        onClick={fetchEvents}
+                                        className="ml-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+                                    >
+                                        Try Again
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Events Section */}
+                        <div className="mb-8">
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900">Upcoming Events</h2>
+                                    <p className="text-gray-600 mt-1">
+                                        {eventsToDisplay.length} event{eventsToDisplay.length !== 1 ? 's' : ''} found
+                                    </p>
+                                </div>
+                            </div>
+
+                            {eventsToDisplay.length === 0 ? (
+                                <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-200">
+                                    <div className="text-6xl mb-4">📅</div>
+                                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No events yet</h3>
+                                    <p className="text-gray-600 mb-6">Create your first event to get started!</p>
+                                    <button
+                                        onClick={() => setShowForm(true)}
+                                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                    >
+                                        Create Your First Event
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                    {eventsToDisplay.map(event => (
+                                        <EventCard
+                                            key={event.id}
+                                            event={event}
+                                            categoryColor={getCategoryColor(event.category)}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </>
                 )}
-
-                {/* Events Section */}
-                <div className="mb-8">
-                    <div className="flex items-center justify-between mb-8">
-                        <div>
-                            <h2 className="text-2xl font-bold text-gray-900">Upcoming Events</h2>
-                            <p className="text-gray-600 mt-1">
-                                {eventsToDisplay.length} event{eventsToDisplay.length !== 1 ? 's' : ''} found
-                            </p>
-                        </div>
-                    </div>
-
-                    {eventsToDisplay.length === 0 ? (
-                        <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-200">
-                            <div className="text-6xl mb-4">📅</div>
-                            <h3 className="text-xl font-semibold text-gray-900 mb-2">No events yet</h3>
-                            <p className="text-gray-600 mb-6">Create your first event to get started!</p>
-                            <button
-                                onClick={() => setShowForm(true)}
-                                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                            >
-                                Create Your First Event
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {eventsToDisplay.map(event => (
-                                <EventCard
-                                    key={event.id}
-                                    event={event}
-                                    categoryColor={getCategoryColor(event.category)}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
             </div>
         </div>
     );
 }
 
-// Beautiful Event Form Component
+// EventForm Component
 function EventForm({
                        onCreateEvent,
                        onCancel
@@ -232,6 +272,14 @@ function EventForm({
         setIsCreating(false);
     };
 
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: name === 'ticketPrice' ? Number(value) : value
+        }));
+    };
+
     return (
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
@@ -254,9 +302,10 @@ function EventForm({
                         </label>
                         <input
                             type="text"
+                            name="name"
                             required
                             value={formData.name}
-                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                            onChange={handleChange}
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                             placeholder="Enter event name"
                         />
@@ -268,9 +317,10 @@ function EventForm({
                         </label>
                         <input
                             type="datetime-local"
+                            name="date"
                             required
                             value={formData.date}
-                            onChange={(e) => setFormData({...formData, date: e.target.value})}
+                            onChange={handleChange}
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                         />
                     </div>
@@ -281,9 +331,10 @@ function EventForm({
                         </label>
                         <input
                             type="text"
+                            name="location"
                             required
                             value={formData.location}
-                            onChange={(e) => setFormData({...formData, location: e.target.value})}
+                            onChange={handleChange}
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                             placeholder="Enter event location"
                         />
@@ -294,8 +345,9 @@ function EventForm({
                             Category
                         </label>
                         <select
+                            name="category"
                             value={formData.category}
-                            onChange={(e) => setFormData({...formData, category: e.target.value})}
+                            onChange={handleChange}
                             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                         >
                             <option value="Technology">Technology</option>
@@ -314,8 +366,9 @@ function EventForm({
                         Description
                     </label>
                     <textarea
+                        name="description"
                         value={formData.description}
-                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        onChange={handleChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                         placeholder="Describe your event..."
                         rows={4}
@@ -328,8 +381,9 @@ function EventForm({
                     </label>
                     <input
                         type="number"
+                        name="ticketPrice"
                         value={formData.ticketPrice}
-                        onChange={(e) => setFormData({...formData, ticketPrice: parseInt(e.target.value) || 0})}
+                        onChange={handleChange}
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                         placeholder="0"
                         min="0"
@@ -367,7 +421,7 @@ function EventForm({
     );
 }
 
-// Beautiful Event Card Component
+// EventCard Component
 function EventCard({ event, categoryColor }: { event: Event; categoryColor: string }) {
     const eventDate = new Date(event.date);
     const now = new Date();
