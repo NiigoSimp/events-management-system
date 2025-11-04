@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import "./globals.css";
 
 export const metadata: Metadata = {
     title: "Event Management System",
@@ -13,12 +12,7 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="vi">
-        <body style={{
-            background: 'linear-gradient(135deg, #ebf4ff 0%, #e0e7ff 100%)',
-            minHeight: '100vh',
-            margin: 0,
-            padding: 0
-        }}>
+        <body style={{ margin: 0, padding: '20px', fontFamily: 'Arial, sans-serif' }}>
         {children}
         </body>
         </html>
