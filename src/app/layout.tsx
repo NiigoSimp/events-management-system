@@ -13,7 +13,12 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="vi">
-        <body className="antialiased bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+        <body style={{
+            background: 'linear-gradient(135deg, #ebf4ff 0%, #e0e7ff 100%)',
+            minHeight: '100vh',
+            margin: 0,
+            padding: 0
+        }}>
         {children}
         </body>
         </html>
