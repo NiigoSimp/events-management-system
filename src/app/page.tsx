@@ -1,486 +1,481 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import Dashboard from '@/components/Dashboard';
+'use client'
+import { useState, useEffect } from 'react'
+import CreateEventForm from './components/CreateEventForm'
+import TicketPurchase from './components/TicketPurchase'
 
 interface Event {
-    id: string;
-    name: string;
-    date: string;
-    location: string;
-    description: string;
-    category: string;
-    ticketPrice: number;
-    status: string;
+    id: string
+    name: string
+    date: string
+    location: string
+    description: string
+    category: string
+    ticketPrice: number
+    maxAttendees: number
+    status: string
+    createdAt: string
 }
 
-export default function Home() {
-    const [events, setEvents] = useState<Event[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [showForm, setShowForm] = useState(false);
-    const [activeTab, setActiveTab] = useState('events'); // 'events' or 'dashboard'
+const ICONS = {
+    event: 'https://img.icons8.com/fluency/48/884499/event.png',
+    calendar: 'https://img.icons8.com/fluency/48/000000/calendar.png',
+    location: 'https://img.icons8.com/fluency/48/000000/marker.png',
+    category: 'https://img.icons8.com/fluency/48/000000/price-tag.png',
+    price: 'https://img.icons8.com/fluency/48/000000/money.png',
+    people: 'https://img.icons8.com/fluency/48/000000/conference.png',
+    search: 'https://img.icons8.com/fluency/48/000000/search.png',
+    filter: 'https://img.icons8.com/fluency/48/000000/filter.png',
+    create: 'https://img.icons8.com/fluency/48/000000/plus.png',
+    cancel: 'https://img.icons8.com/fluency/48/000000/close.png',
+    ticket: 'https://img.icons8.com/fluency/48/000000/ticket.png',
+    empty: 'https://img.icons8.com/fluency/96/000000/empty-box.png',
+    loading: 'https://img.icons8.com/fluency/96/000000/loading.png'
+}
+
+export default function HomePage() {
+    const [events, setEvents] = useState<Event[]>([])
+    const [showForm, setShowForm] = useState(false)
+    const [loading, setLoading] = useState(true)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [selectedCategory, setSelectedCategory] = useState('')
+    const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+    const [showTicketModal, setShowTicketModal] = useState(false)
 
     const fetchEvents = async () => {
         try {
-            setLoading(true);
-            setError('');
-            const response = await fetch('/api/events');
-
-            if (!response.ok) {
-                setError('Failed to fetch events');
-                return;
+            const response = await fetch('/api/events')
+            const data = await response.json()
+            if (data.success) {
+                setEvents(data.data)
             }
-
-            const result = await response.json();
-
-            if (result.success && Array.isArray(result.data)) {
-                setEvents(result.data);
-            } else {
-                setEvents([]);
-                if (result.error) {
-                    setError(result.error);
-                }
-            }
-        } catch (err) {
-            console.error('Error fetching events:', err);
-            setError('Failed to load events');
-            setEvents([]);
+        } catch (error) {
+            console.error('Error fetching events:', error)
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
-
-    const createEvent = async (eventData: Omit<Event, 'id'>) => {
-        try {
-            const response = await fetch('/api/events', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(eventData),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                return { success: false, error: errorData.error || 'Failed to create event' };
-            }
-
-            const result = await response.json();
-
-            if (result.success) {
-                await fetchEvents();
-                setShowForm(false);
-                return { success: true, event: result.data };
-            } else {
-                return { success: false, error: result.error || 'Failed to create event' };
-            }
-        } catch (err) {
-            console.error('Error creating event:', err);
-            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-            return { success: false, error: errorMessage };
-        }
-    };
-
-    useEffect(() => {
-        fetchEvents();
-    }, []);
-
-    const eventsToDisplay = Array.isArray(events) ? events : [];
-
-    const getCategoryColor = (category: string) => {
-        const colors: { [key: string]: string } = {
-            'Technology': 'bg-blue-100 text-blue-800',
-            'Music': 'bg-purple-100 text-purple-800',
-            'Business': 'bg-green-100 text-green-800',
-            'Sports': 'bg-red-100 text-red-800',
-            'Education': 'bg-orange-100 text-orange-800',
-            'Art': 'bg-pink-100 text-pink-800',
-            'Food': 'bg-yellow-100 text-yellow-800'
-        };
-        return colors[category] || 'bg-gray-100 text-gray-800';
-    };
-
-    if (loading && activeTab === 'events') {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading events...</p>
-                </div>
-            </div>
-        );
     }
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-            {/* Header */}
-            <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center py-6">
-                        <div>
-                            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                EventFlow
-                            </h1>
-                            <p className="text-gray-600 mt-1">Professional Event Management System</p>
-                        </div>
-                        <div className="flex gap-4">
-                            {/* Navigation Tabs */}
-                            <div className="flex bg-gray-100 rounded-lg p-1">
-                                <button
-                                    onClick={() => setActiveTab('events')}
-                                    className={`px-4 py-2 rounded-md transition-colors ${
-                                        activeTab === 'events'
-                                            ? 'bg-white text-blue-600 shadow-sm'
-                                            : 'text-gray-600 hover:text-gray-900'
-                                    }`}
-                                >
-                                    Events
-                                </button>
-                                <button
-                                    onClick={() => setActiveTab('dashboard')}
-                                    className={`px-4 py-2 rounded-md transition-colors ${
-                                        activeTab === 'dashboard'
-                                            ? 'bg-white text-blue-600 shadow-sm'
-                                            : 'text-gray-600 hover:text-gray-900'
-                                    }`}
-                                >
-                                    Dashboard
-                                </button>
-                            </div>
+    useEffect(() => {
+        void fetchEvents()
+    }, [])
 
-                            {activeTab === 'events' && (
-                                <button
-                                    onClick={() => setShowForm(!showForm)}
-                                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                                >
-                                    {showForm ? '✕ Cancel' : '+ Create Event'}
-                                </button>
-                            )}
-                        </div>
+    const filteredEvents = events.filter(event => {
+        const matchesSearch = event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            event.location.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesCategory = !selectedCategory || event.category === selectedCategory
+        return matchesSearch && matchesCategory
+    })
+
+    const categories = Array.from(new Set(events.map(event => event.category)))
+
+    // ADD THIS MISSING FUNCTION
+    const handleTicketPurchase = (event: Event) => {
+        console.log('Đặt Vé button clicked for event:', event.name)
+        console.log('Event ID:', event.id)
+        setSelectedEvent(event)
+        setShowTicketModal(true)
+        console.log('Modal should be visible now')
+    }
+
+    // ADD THIS MISSING FUNCTION
+    const closeTicketModal = () => {
+        console.log('Closing modal')
+        setShowTicketModal(false)
+        setSelectedEvent(null)
+    }
+
+    useEffect(() => {
+        console.log('Modal state changed:', showTicketModal)
+        console.log('Selected event:', selectedEvent)
+    }, [showTicketModal, selectedEvent])
+
+    if (loading) return (
+        <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            minHeight: '50vh',
+            fontSize: '1.125rem',
+            color: '#6b7280',
+            flexDirection: 'column',
+            gap: '1rem'
+        }}>
+            <img
+                src={ICONS.loading}
+                alt="Loading"
+                style={{ width: '64px', height: '64px' }}
+            />
+            🌀 Đang tải sự kiện...
+        </div>
+    )
+
+    return (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+            {/* Header */}
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '2rem',
+                flexWrap: 'wrap',
+                gap: '1rem'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{
+                        width: '48px',
+                        height: '48px',
+                        backgroundColor: '#884499',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontSize: '1.5rem'
+                    }}>
+                        ⌨
+                    </div>
+                    <div>
+                        <h1 style={{
+                            fontSize: '2.5rem',
+                            fontWeight: 'bold',
+                            color: '#1f2937',
+                            marginBottom: '0.5rem'
+                        }}>
+                            Sự Kiện
+                        </h1>
+                        <p style={{ color: '#6b7280' }}>
+                            Khám phá các sự kiện sắp diễn ra
+                        </p>
                     </div>
                 </div>
-            </div>
-
-            {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {activeTab === 'dashboard' ? (
-                    <Dashboard />
-                ) : (
-                    <>
-                        {/* Create Event Form */}
-                        {showForm && (
-                            <div className="mb-8 animate-fade-in">
-                                <EventForm onCreateEvent={createEvent} onCancel={() => setShowForm(false)} />
-                            </div>
-                        )}
-
-                        {/* Error Display */}
-                        {error && (
-                            <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
-                                <div className="flex items-center">
-                                    <div className="text-red-600 font-medium">{error}</div>
-                                    <button
-                                        onClick={fetchEvents}
-                                        className="ml-auto px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
-                                    >
-                                        Try Again
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Events Section */}
-                        <div className="mb-8">
-                            <div className="flex items-center justify-between mb-8">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900">Upcoming Events</h2>
-                                    <p className="text-gray-600 mt-1">
-                                        {eventsToDisplay.length} event{eventsToDisplay.length !== 1 ? 's' : ''} found
-                                    </p>
-                                </div>
-                            </div>
-
-                            {eventsToDisplay.length === 0 ? (
-                                <div className="text-center py-12 bg-white rounded-2xl shadow-sm border border-gray-200">
-                                    <div className="text-6xl mb-4">📅</div>
-                                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No events yet</h3>
-                                    <p className="text-gray-600 mb-6">Create your first event to get started!</p>
-                                    <button
-                                        onClick={() => setShowForm(true)}
-                                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                                    >
-                                        Create Your First Event
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                                    {eventsToDisplay.map(event => (
-                                        <EventCard
-                                            key={event.id}
-                                            event={event}
-                                            categoryColor={getCategoryColor(event.category)}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
-            </div>
-        </div>
-    );
-}
-
-// EventForm Component
-function EventForm({
-                       onCreateEvent,
-                       onCancel
-                   }: {
-    onCreateEvent: (eventData: any) => Promise<any>;
-    onCancel: () => void;
-}) {
-    const [isCreating, setIsCreating] = useState(false);
-    const [formData, setFormData] = useState({
-        name: '',
-        date: '',
-        location: '',
-        description: '',
-        category: 'Technology',
-        ticketPrice: 0
-    });
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsCreating(true);
-
-        const result = await onCreateEvent(formData);
-
-        if (result.success) {
-            setFormData({
-                name: '',
-                date: '',
-                location: '',
-                description: '',
-                category: 'Technology',
-                ticketPrice: 0
-            });
-        } else {
-            alert(`Failed to create event: ${result.error}`);
-        }
-
-        setIsCreating(false);
-    };
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: name === 'ticketPrice' ? Number(value) : value
-        }));
-    };
-
-    return (
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">Create New Event</h3>
                 <button
-                    onClick={onCancel}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    onClick={() => setShowForm(!showForm)}
+                    style={{
+                        backgroundColor: '#884499',
+                        color: 'white',
+                        padding: '0.75rem 1.5rem',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '1rem',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        boxShadow: '0 2px 4px rgba(136, 68, 153, 0.3)',
+                        transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#773388'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#884499'}
                 >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <div style={{
+                        width: '20px',
+                        height: '20px',
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <div style={{
+                            width: '100%',
+                            height: '2px',
+                            backgroundColor: 'white',
+                            position: 'absolute'
+                        }}></div>
+                        {!showForm && (
+                            <div style={{
+                                width: '2px',
+                                height: '100%',
+                                backgroundColor: 'white',
+                                position: 'absolute'
+                            }}></div>
+                        )}
+                    </div>
+                    {showForm ? 'Hủy' : 'Tạo Sự Kiện'}
                 </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Event Name *
-                        </label>
-                        <input
-                            type="text"
-                            name="name"
-                            required
-                            value={formData.name}
-                            onChange={handleChange}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            placeholder="Enter event name"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Date & Time *
-                        </label>
-                        <input
-                            type="datetime-local"
-                            name="date"
-                            required
-                            value={formData.date}
-                            onChange={handleChange}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Location *
-                        </label>
-                        <input
-                            type="text"
-                            name="location"
-                            required
-                            value={formData.location}
-                            onChange={handleChange}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                            placeholder="Enter event location"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Category
-                        </label>
-                        <select
-                            name="category"
-                            value={formData.category}
-                            onChange={handleChange}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        >
-                            <option value="Technology">Technology</option>
-                            <option value="Music">Music</option>
-                            <option value="Business">Business</option>
-                            <option value="Sports">Sports</option>
-                            <option value="Education">Education</option>
-                            <option value="Art">Art</option>
-                            <option value="Food">Food</option>
-                        </select>
-                    </div>
-                </div>
-
+            {/* Search and Filter */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr auto',
+                gap: '1rem',
+                marginBottom: '2rem',
+                alignItems: 'end'
+            }}>
                 <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Description
-                    </label>
-                    <textarea
-                        name="description"
-                        value={formData.description}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        placeholder="Describe your event..."
-                        rows={4}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Ticket Price ($)
+                    <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#374151',
+                        marginBottom: '0.5rem'
+                    }}>
+                        <img
+                            src={ICONS.search}
+                            alt="Search"
+                            style={{ width: '16px', height: '16px' }}
+                        />
+                        Tìm kiếm sự kiện
                     </label>
                     <input
-                        type="number"
-                        name="ticketPrice"
-                        value={formData.ticketPrice}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                        placeholder="0"
-                        min="0"
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Tìm theo tên hoặc địa điểm..."
+                        style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '8px',
+                            fontSize: '1rem',
+                            outline: 'none',
+                            transition: 'border-color 0.2s'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#884499'}
+                        onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                     />
                 </div>
-
-                <div className="flex gap-4 pt-4">
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+                <div>
+                    <label style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '500',
+                        color: '#374151',
+                        marginBottom: '0.5rem'
+                    }}>
+                        <img
+                            src={ICONS.filter}
+                            alt="Filter"
+                            style={{ width: '16px', height: '16px' }}
+                        />
+                        Lọc theo danh mục
+                    </label>
+                    <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        style={{
+                            padding: '0.75rem',
+                            border: '1px solid #d1d5db',
+                            borderRadius: '8px',
+                            fontSize: '1rem',
+                            outline: 'none',
+                            minWidth: '150px',
+                            transition: 'border-color 0.2s',
+                            cursor: 'pointer'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = '#884499'}
+                        onBlur={(e) => e.target.style.borderColor = '#d1d5db'}
                     >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={isCreating}
-                        className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-medium shadow-lg hover:shadow-xl"
-                    >
-                        {isCreating ? (
-                            <span className="flex items-center justify-center">
-                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Creating...
-                            </span>
-                        ) : (
-                            'Create Event'
-                        )}
-                    </button>
-                </div>
-            </form>
-        </div>
-    );
-}
-
-// EventCard Component
-function EventCard({ event, categoryColor }: { event: Event; categoryColor: string }) {
-    const eventDate = new Date(event.date);
-    const now = new Date();
-    const isUpcoming = eventDate > now;
-
-    return (
-        <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200 hover:border-blue-200 group">
-            <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${categoryColor}`}>
-                        {event.category}
-                    </span>
-                    <div className="flex items-center space-x-1 text-sm text-gray-500">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span>{eventDate.toLocaleDateString()}</span>
-                    </div>
-                </div>
-
-                <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors line-clamp-2">
-                    {event.name}
-                </h3>
-
-                <p className="text-gray-600 mb-4 line-clamp-3">
-                    {event.description}
-                </p>
-
-                <div className="space-y-2 mb-4">
-                    <div className="flex items-center text-sm text-gray-600">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        {event.location}
-                    </div>
-
-                    <div className="flex items-center text-sm text-gray-600">
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                        </svg>
-                        ${event.ticketPrice === 0 ? 'Free' : event.ticketPrice.toLocaleString()}
-                    </div>
-                </div>
-
-                <div className="flex justify-between items-center pt-4 border-t border-gray-100">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        isUpcoming ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                        {isUpcoming ? 'Upcoming' : 'Past Event'}
-                    </span>
-                    <button className="text-blue-600 hover:text-blue-700 font-medium text-sm flex items-center group-hover:translate-x-1 transition-transform">
-                        View Details
-                        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                    </button>
+                        <option value="">Tất cả</option>
+                        {categories.map(category => (
+                            <option key={category} value={category}>{category}</option>
+                        ))}
+                    </select>
                 </div>
             </div>
+
+            {/* Create Event Form - Only show when button is clicked */}
+            {showForm && <CreateEventForm onEventCreated={fetchEvents} />}
+
+            {/* Events Grid */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
+                gap: '1.5rem'
+            }}>
+                {filteredEvents.map((event) => (
+                    <div key={event.id} style={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '12px',
+                        padding: '1.5rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        transition: 'transform 0.2s, box-shadow 0.2s'
+                    }}
+                         onMouseEnter={(e) => {
+                             e.currentTarget.style.transform = 'translateY(-4px)'
+                             e.currentTarget.style.boxShadow = '0 8px 25px rgba(136, 68, 153, 0.15)'
+                         }}
+                         onMouseLeave={(e) => {
+                             e.currentTarget.style.transform = 'translateY(0)'
+                             e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)'
+                         }}
+                    >
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            marginBottom: '1rem'
+                        }}>
+                            <h2 style={{
+                                fontSize: '1.25rem',
+                                fontWeight: '600',
+                                color: '#1f2937',
+                                margin: 0,
+                                flex: 1
+                            }}>
+                                {event.name}
+                            </h2>
+                            <span style={{
+                                backgroundColor: event.status === 'active' ? '#dcfce7' : '#fef2f2',
+                                color: event.status === 'active' ? '#166534' : '#dc2626',
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: '20px',
+                                fontSize: '0.75rem',
+                                fontWeight: '500',
+                                textTransform: 'capitalize'
+                            }}>
+                                {event.status}
+                            </span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <img
+                                    src={ICONS.calendar}
+                                    alt="Date"
+                                    style={{ width: '16px', height: '16px', opacity: 0.7 }}
+                                />
+                                <span style={{ color: '#6b7280', minWidth: '60px' }}>Ngày:</span>
+                                <span style={{ fontWeight: '500' }}>
+                                    {new Date(event.date).toLocaleDateString('vi-VI')}
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <img
+                                    src={ICONS.location}
+                                    alt="Location"
+                                    style={{ width: '16px', height: '16px', opacity: 0.7 }}
+                                />
+                                <span style={{ color: '#6b7280', minWidth: '60px' }}>Địa điểm:</span>
+                                <span style={{ fontWeight: '500' }}>{event.location}</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <img
+                                    src={ICONS.category}
+                                    alt="Category"
+                                    style={{ width: '16px', height: '16px', opacity: 0.7 }}
+                                />
+                                <span style={{ color: '#6b7280', minWidth: '60px' }}>Danh mục:</span>
+                                <span style={{
+                                    backgroundColor: '#f3f4f6',
+                                    padding: '0.25rem 0.5rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.875rem'
+                                }}>
+                                    {event.category}
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <img
+                                    src={ICONS.price}
+                                    alt="Price"
+                                    style={{ width: '16px', height: '16px', opacity: 0.7 }}
+                                />
+                                <span style={{ color: '#6b7280', minWidth: '60px' }}>Giá vé:</span>
+                                <span style={{ fontWeight: '600', color: '#059669' }}>
+                                    ${event.ticketPrice}
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <img
+                                    src={ICONS.people}
+                                    alt="Attendees"
+                                    style={{ width: '16px', height: '16px', opacity: 0.7 }}
+                                />
+                                <span style={{ color: '#6b7280', minWidth: '60px' }}>Số lượng:</span>
+                                <span style={{ fontWeight: '500' }}>{event.maxAttendees} người</span>
+                            </div>
+                        </div>
+
+                        {event.description && (
+                            <div style={{
+                                marginTop: '1rem',
+                                padding: '1rem',
+                                backgroundColor: '#f8fafc',
+                                borderRadius: '8px',
+                                borderLeft: '4px solid #3b82f6'
+                            }}>
+                                <p style={{
+                                    margin: 0,
+                                    fontSize: '0.875rem',
+                                    color: '#4b5563',
+                                    lineHeight: '1.5'
+                                }}>
+                                    {event.description}
+                                </p>
+                            </div>
+                        )}
+
+                        <div style={{
+                            marginTop: '1.5rem',
+                            paddingTop: '1rem',
+                            borderTop: '1px solid #e5e7eb'
+                        }}>
+                            <button
+                                onClick={() => handleTicketPurchase(event)}
+                                style={{
+                                    width: '100%',
+                                    padding: '0.75rem 1rem',
+                                    backgroundColor: '#884499',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '0.875rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '0.5rem',
+                                    fontWeight: '500',
+                                    transition: 'background-color 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#773388'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#884499'}
+                            >
+                                <img
+                                    src={ICONS.ticket}
+                                    alt="Ticket"
+                                    style={{ width: '16px', height: '16px' }}
+                                />
+                                Đặt Vé
+                            </button>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Ticket Purchase Modal */}
+            {showTicketModal && selectedEvent && (
+                <TicketPurchase
+                    event={selectedEvent}
+                    onClose={closeTicketModal}
+                    onTicketPurchased={fetchEvents}
+                />
+            )}
+
+            {filteredEvents.length === 0 && !loading && (
+                <div style={{
+                    textAlign: 'center',
+                    padding: '4rem 2rem',
+                    color: '#6b7280'
+                }}>
+                    <img
+                        src={ICONS.empty}
+                        alt="No events"
+                        style={{ width: '96px', height: '96px', marginBottom: '1rem', opacity: 0.5 }}
+                    />
+                    <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
+                        Không tìm thấy sự kiện
+                    </h3>
+                    <p>Hãy thử thay đổi từ khóa tìm kiếm hoặc tạo sự kiện mới</p>
+                </div>
+            )}
         </div>
-    );
+    )
 }

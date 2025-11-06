@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Navigation from '../components/Navigation';
+import './globals.css';
 
 export const metadata: Metadata = {
     title: "Event Management System",
@@ -12,8 +14,11 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="vi">
-        <body style={{ margin: 0, padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-        {children}
+        <body style={{ margin: 0, padding: 0, fontFamily: 'Arial, sans-serif' }}>
+        <Navigation />
+        <div style={{ padding: '20px' }}>
+            {children}
+        </div>
         </body>
         </html>
     );
