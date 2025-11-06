@@ -1,6 +1,8 @@
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
-const mongodbUri = process.env.MONGODB_URI;
 
 export async function GET() {
     try {
