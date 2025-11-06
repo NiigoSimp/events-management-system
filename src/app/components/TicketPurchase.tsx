@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+
 interface Event {
     id: string
     name: string
@@ -64,10 +63,8 @@ export default function TicketPurchase({ event, onClose, onTicketPurchased }: Ti
                     await onTicketPurchased()
                 }
 
-                // Close the modal
                 onClose()
 
-                // Show success message
                 alert(`Đặt vé thành công! Bạn đã đặt ${quantity} vé cho sự kiện ${event.name}`)
             } else {
                 console.error('Failed to purchase ticket')

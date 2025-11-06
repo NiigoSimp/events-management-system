@@ -2,8 +2,7 @@
 import { useState, useEffect } from 'react'
 import CreateEventForm from './components/CreateEventForm'
 import TicketPurchase from './components/TicketPurchase'
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+
 interface Event {
     id: string
     name: string
@@ -279,11 +278,8 @@ export default function HomePage() {
                     </select>
                 </div>
             </div>
-
-            {/* Create Event Form - Only show when button is clicked */}
             {showForm && <CreateEventForm onEventCreated={fetchEvents} />}
 
-            {/* Events Grid */}
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',

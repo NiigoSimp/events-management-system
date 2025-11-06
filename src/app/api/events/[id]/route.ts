@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
@@ -7,41 +8,60 @@ export async function GET(
     try {
         const eventId = params.id
 
-        // Here you would typically fetch the event from your database
-        // For now, we'll simulate fetching an event
-        // Replace this with your actual database query
+        // Validate eventId
+        if (!eventId) {
+            return NextResponse.json(
+                { success: false, error: 'Event ID is required' },
+                { status: 400 }
+            );
+        }
 
-        // Example: Fetch from your events API or database
-        const eventsResponse = await fetch(`${request.nextUrl.origin}/api/events`)
-        const eventsData = await eventsResponse.json()
+        const eventsResponse = await fetch(`${request.nextUrl.origin}/api/events`);
+
+        if (!eventsResponse.ok) {
+            return NextResponse.json(
+                { success: false, error: 'Failed to fetch events from API' },
+                { status: 500 }
+            );
+        }
+
+        const eventsData = await eventsResponse.json();
 
         if (!eventsData.success) {
             return NextResponse.json(
                 { success: false, error: 'Failed to fetch events' },
                 { status: 500 }
-            )
+            );
         }
 
-        const event = eventsData.data.find((event: any) => event.id === eventId)
+        const event = eventsData.data.find((event: any) => event.id === eventId);
 
         if (!event) {
             return NextResponse.json(
                 { success: false, error: 'Event not found' },
                 { status: 404 }
-            )
+            );
         }
 
         return NextResponse.json({
             success: true,
             data: event
-        })
+        });
 
-    } catch (error) {
-        console.error('Error fetching event:', error)
+    } catch (error: unknown) {
+        console.error('Error fetching event:', error);
+
+        const errorMessage = error instanceof Error
+            ? error.message
+            : 'An unknown error occurred';
+
         return NextResponse.json(
-            { success: false, error: 'Failed to fetch event' },
+            {
+                success: false,
+                error: 'Failed to fetch event',
+                details: errorMessage
+            },
             { status: 500 }
-        )
+        );
     }
-}export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+}

@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Navigation from '../components/Navigation';
 import './globals.css';
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+
 export const metadata: Metadata = {
     title: "Event Management System",
     description: "Hệ thống quản lý sự kiện chuyên nghiệp",

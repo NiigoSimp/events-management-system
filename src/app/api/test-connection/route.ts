@@ -1,14 +1,13 @@
 import { NextResponse } from 'next/server'
 import clientPromise from '@/lib/mongodb'
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+
 export async function GET() {
     try {
         console.log('Testing MongoDB connection...')
         const client = await clientPromise
         console.log('Connected to MongoDB')
 
-        const db = client.db('eventmanagement')
+        const db = client.db('event-management')
         console.log('Using database:', db.databaseName)
 
         // Try to insert a test document
@@ -27,7 +26,6 @@ export async function GET() {
         const result = await db.collection('events').insertOne(testDoc)
         console.log('Insert result:', result)
 
-        // Count documents
         const count = await db.collection('events').countDocuments()
         console.log('Total documents:', count)
 

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json()
@@ -14,14 +13,6 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             )
         }
-
-        // Here you would typically:
-        // 1. Check if event exists and has available tickets
-        // 2. Create ticket record in your database
-        // 3. Send confirmation email
-        // 4. Return ticket information
-
-        // For now, we'll simulate a successful ticket creation
         const ticket = {
             id: `TKT-${Date.now()}`,
             eventId,
