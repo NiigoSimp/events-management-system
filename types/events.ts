@@ -10,3 +10,5 @@ export interface Event {
 }
 
 export type CreateEventData = Omit<Event, 'id'>;
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;

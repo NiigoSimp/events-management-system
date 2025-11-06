@@ -2,7 +2,8 @@
 import { useState, useEffect } from 'react'
 import CreateEventForm from './components/CreateEventForm'
 import TicketPurchase from './components/TicketPurchase'
-
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 interface Event {
     id: string
     name: string

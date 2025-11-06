@@ -1,8 +1,7 @@
-// components/TicketPurchase.tsx
 'use client'
-
 import { useState } from 'react'
-
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 interface Event {
     id: string
     name: string
