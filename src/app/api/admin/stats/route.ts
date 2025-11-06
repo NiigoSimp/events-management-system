@@ -14,21 +14,19 @@ export async function GET() {
         const client = new MongoClient(uri)
         await client.connect()
 
-        const db = client.db() // Add your database name if needed: client.db('your-db-name')
+        const db = client.db('event-management-system')
 
-        // Replace with your actual stats queries
         const usersCount = await db.collection('users').countDocuments()
         const eventsCount = await db.collection('events').countDocuments()
         const registrationsCount = await db.collection('registrations').countDocuments()
 
         await client.close()
 
-        // Return actual stats data
         const stats = {
             users: usersCount,
             events: eventsCount,
             registrations: registrationsCount,
-            // Add any other stats you need
+
         }
 
         return new Response(JSON.stringify(stats), {
