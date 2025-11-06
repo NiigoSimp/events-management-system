@@ -7,19 +7,28 @@ import clientPromise from '@/lib/mongodb';
 export async function GET() {
     try {
         const client = await clientPromise;
-        const db = client.db(); // This line is now used
+        const db = client.db('eventmanagement'); // Fixed typo
 
-        // Add your actual database operations here to use the 'db' variable
-        // For example:
-        const stats = await db.collection('your_collection').find().toArray();
+        // Your original aggregation logic would go here
+        const revenueStats = await db.collection('registrations').aggregate([
+            // Your aggregation pipeline
+        ]).toArray();
 
-        return NextResponse.json({ data: stats });
+        return NextResponse.json({
+            success: true,
+            data: revenueStats
+        });
     } catch (error: unknown) {
-        // Properly type the error
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        const errorMessage = error instanceof Error
+            ? error.message
+            : 'An unknown error occurred';
 
         return NextResponse.json(
-            { error: errorMessage },
+            {
+                success: false,
+                error: 'Failed to fetch statistics',
+                details: errorMessage
+            },
             { status: 500 }
         );
     }
