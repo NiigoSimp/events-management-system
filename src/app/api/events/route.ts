@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { SQLServices } from '../../../../services/SQLServices'
+import { SQLServices } from '../../../../services/sqlServices'
 
 // Define types for the event object
 interface SQLEvent {
@@ -25,31 +25,30 @@ export async function GET(request: NextRequest) {
 
         let events: SQLEvent[] = []
 
-        // You need to implement these methods in your SQLServices class
-        if (category && location) {
-            // Tìm theo category và location
-            events = await SQLServices.searchEvents(category, location)
-        } else if (category) {
-            // Tìm tất cả events và filter theo category
+        // Fix: Use explicit type checking and type assertions
+        const hasCategory = category !== null && category !== undefined && category !== ''
+        const hasLocation = location !== null && location !== undefined && location !== ''
+        const hasQuery = query !== null && query !== undefined && query !== ''
+
+        if (hasCategory && hasLocation) {
+            events = await SQLServices.searchEvents(category!, location!)
+        } else if (hasCategory) {
             const allEvents = await SQLServices.getUpcomingEvents()
             events = allEvents.filter((event: SQLEvent) =>
-                event.Category.toLowerCase().includes(category.toLowerCase())
+                event.Category.toLowerCase().includes(category!.toLowerCase())
             )
-        } else if (location) {
-            // Tìm tất cả events và filter theo location
+        } else if (hasLocation) {
             const allEvents = await SQLServices.getUpcomingEvents()
             events = allEvents.filter((event: SQLEvent) =>
-                event.Location.toLowerCase().includes(location.toLowerCase())
+                event.Location.toLowerCase().includes(location!.toLowerCase())
             )
-        } else if (query) {
-            // Tìm kiếm text trong name và description
+        } else if (hasQuery) {
             const allEvents = await SQLServices.getUpcomingEvents()
             events = allEvents.filter((event: SQLEvent) =>
-                event.EventName.toLowerCase().includes(query.toLowerCase()) ||
-                (event.Description && event.Description.toLowerCase().includes(query.toLowerCase()))
+                event.EventName.toLowerCase().includes(query!.toLowerCase()) ||
+                (event.Description && event.Description.toLowerCase().includes(query!.toLowerCase()))
             )
         } else {
-            // Trả về tất cả events nếu không có search criteria
             events = await SQLServices.getUpcomingEvents()
         }
 
