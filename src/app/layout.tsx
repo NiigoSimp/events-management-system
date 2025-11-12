@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Navigation from '../components/Navigation';
+import { AuthProvider } from '@/components/lib/auth/AuthProvider';
+import AuthGuard from '../components/auth/AuthGuard';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -15,10 +17,14 @@ export default function RootLayout({
     return (
         <html lang="vi">
         <body style={{ margin: 0, padding: 0, fontFamily: 'Arial, sans-serif' }}>
-        <Navigation />
-        <div style={{ padding: '20px' }}>
-            {children}
-        </div>
+        <AuthProvider>
+            <AuthGuard>
+                <Navigation />
+                <div style={{ padding: '20px' }}>
+                    {children}
+                </div>
+            </AuthGuard>
+        </AuthProvider>
         </body>
         </html>
     );

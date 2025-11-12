@@ -26,6 +26,7 @@ export default function CreateEventForm({ onEventCreated }: CreateEventFormProps
         maxAttendees: 0
     })
     const [loading, setLoading] = useState(false)
+    const [message, setMessage] = useState('') // Added message state
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target
@@ -38,6 +39,7 @@ export default function CreateEventForm({ onEventCreated }: CreateEventFormProps
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
+        setMessage('') // Clear previous messages
 
         try {
             const response = await fetch('/api/events', {
@@ -48,7 +50,10 @@ export default function CreateEventForm({ onEventCreated }: CreateEventFormProps
                 body: JSON.stringify(formData),
             })
 
-            if (response.ok) {
+            const result = await response.json() // Added response parsing
+
+            if (result.success) {
+                setMessage('Tạo sự kiện thành công!') // Success message
                 // Reset form
                 setFormData({
                     name: '',
@@ -63,10 +68,11 @@ export default function CreateEventForm({ onEventCreated }: CreateEventFormProps
                 // Call the callback function to refresh events
                 await onEventCreated()
             } else {
-                console.error('Failed to create event')
+                setMessage('Lỗi: ' + result.error) // Error message
             }
         } catch (error) {
             console.error('Error creating event:', error)
+            setMessage('Lỗi khi tạo sự kiện') // Error message
         } finally {
             setLoading(false)
         }
@@ -106,7 +112,22 @@ export default function CreateEventForm({ onEventCreated }: CreateEventFormProps
                 Tạo Sự Kiện Mới
             </h2>
 
+            {/* Added message display */}
+            {message && (
+                <div style={{
+                    padding: '12px',
+                    borderRadius: '8px',
+                    marginBottom: '1rem',
+                    backgroundColor: message.includes('thành công') ? '#f0f9ff' : '#fef2f2',
+                    border: `1px solid ${message.includes('thành công') ? '#bae6fd' : '#fecaca'}`,
+                    color: message.includes('thành công') ? '#0369a1' : '#dc2626'
+                }}>
+                    {message}
+                </div>
+            )}
+
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {/* Rest of your original form code remains exactly the same */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                     <div>
                         <label style={{

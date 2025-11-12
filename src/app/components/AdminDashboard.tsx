@@ -25,16 +25,24 @@ export default function AdminDashboard() {
 
             const eventsData = await eventsResponse.json()
 
+            // Calculate total tickets and revenue from events
+            const totalTickets = eventsData.data?.reduce((sum: number, event: any) => sum + (event.ticketsSold || 0), 0) || 0
+            const totalRevenue = eventsData.data?.reduce((sum: number, event: any) => {
+                // Assuming average ticket price of $50 for revenue calculation
+                // You can modify this based on your actual ticket pricing
+                return sum + ((event.ticketsSold || 0) * 50)
+            }, 0) || 0
+
             setStats({
                 totalEvents: eventsData.data?.length || 0,
                 totalUsers: 0, // You'll need to implement users API
-                totalTickets: 0, // You'll need to implement tickets API
-                totalRevenue: 0,
+                totalTickets: totalTickets, // Added actual ticket count
+                totalRevenue: totalRevenue, // Added revenue calculation
                 upcomingEvents: eventsData.data?.filter((event: any) =>
                     new Date(event.date) > new Date()
                 ) || [],
-                topEvents: [],
-                eventCategories: []
+                topEvents: eventsData.data?.slice(0, 5) || [], // Show first 5 events as top events
+                eventCategories: Array.from(new Set(eventsData.data?.map((event: any) => event.category).filter(Boolean))) || []
             })
         } catch (error) {
             console.error('Error fetching dashboard data:', error)
@@ -47,12 +55,17 @@ export default function AdminDashboard() {
         fetchDashboardData()
     }, [])
 
+    // Added function to handle event creation callback
+    const handleEventCreated = async () => {
+        await fetchDashboardData() // Refresh data when new event is created
+    }
+
     if (loading) return <div className="p-6">Đang tải dữ liệu...</div>
 
     return (
         <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
             <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '2rem' }}>
-                 Bảng Điều Khiển
+                Bảng Điều Khiển
             </h1>
 
             {/* Stats Overview */}
@@ -100,7 +113,7 @@ export default function AdminDashboard() {
                     border: '1px solid #e5e7eb'
                 }}>
                     <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#6b7280', marginBottom: '0.5rem' }}>
-                        Tổng Vé
+                        Tổng Vé Đã Bán
                     </h3>
                     <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937' }}>
                         {stats?.totalTickets || 0}
@@ -118,7 +131,7 @@ export default function AdminDashboard() {
                         Tổng Doanh Thu
                     </h3>
                     <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#1f2937' }}>
-                        ${stats?.totalRevenue || 0}
+                        ${stats?.totalRevenue?.toLocaleString() || 0}
                     </p>
                 </div>
             </div>
@@ -187,6 +200,9 @@ export default function AdminDashboard() {
                                     <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
                                         📅 {new Date(event.date).toLocaleDateString('vi-VI')} • 📍 {event.location}
                                     </p>
+                                    <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                                        🎫 Vé đã bán: {event.ticketsSold || 0}
+                                    </p>
                                 </div>
                             ))}
                             {(!stats?.upcomingEvents || stats.upcomingEvents.length === 0) && (
@@ -210,7 +226,7 @@ export default function AdminDashboard() {
                         </h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             <button
-                                onClick={() => window.location.href = '/'}
+                                onClick={() => window.location.href = '/admin/create-event'}
                                 style={{
                                     padding: '0.75rem 1rem',
                                     backgroundColor: '#bb5688',
@@ -221,7 +237,7 @@ export default function AdminDashboard() {
                                     textAlign: 'left'
                                 }}
                             >
-                                <span style={{ color: 'white' }}>✙</span>  Tạo Sự Kiện Mới
+                                <span style={{ color: 'white' }}>✙</span> Tạo Sự Kiện Mới
                             </button>
 
                             <button
@@ -240,10 +256,13 @@ export default function AdminDashboard() {
                             </button>
                             <button
                                 onClick={async () => {
-                                    const response = await fetch('/api/queries?type=upcoming-events')
-                                    const data = await response.json()
-                                    console.log('Upcoming events:', data)
-                                    alert(`Có ${data.data?.length || 0} sự kiện sắp diễn ra`)
+                                    try {
+                                        const response = await fetch('/api/events')
+                                        const data = await response.json()
+                                        alert(`Có ${data.data?.length || 0} sự kiện trong hệ thống`)
+                                    } catch (error) {
+                                        alert('Lỗi khi tải dữ liệu sự kiện')
+                                    }
                                 }}
                                 style={{
                                     padding: '0.75rem 1rem',
@@ -273,32 +292,61 @@ export default function AdminDashboard() {
                     <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
                         📊 Phân Tích Sự Kiện
                     </h3>
-                    <p style={{ color: '#6b7280' }}>
-                        Tính năng phân tích chi tiết đang được phát triển...
-                    </p>
-                    <button
-                        onClick={async () => {
-                            try {
-                                const response = await fetch('/api/queries?type=event-categories')
-                                const data = await response.json()
-                                console.log('Event categories:', data)
-                                alert('Đã tải dữ liệu phân loại sự kiện (xem console)')
-                            } catch (error) {
-                                alert('Lỗi khi tải dữ liệu')
-                            }
-                        }}
-                        style={{
-                            marginTop: '1rem',
-                            padding: '0.75rem 1rem',
-                            backgroundColor: '#DDAACC',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        Xem Phân Loại Sự Kiện
-                    </button>
+
+                    {/* Added event categories display */}
+                    {stats?.eventCategories && stats.eventCategories.length > 0 && (
+                        <div style={{ marginBottom: '1.5rem' }}>
+                            <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                Danh Mục Sự Kiện
+                            </h4>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                {stats.eventCategories.map((category: string, index: number) => (
+                                    <span key={index} style={{
+                                        padding: '0.25rem 0.75rem',
+                                        backgroundColor: '#f3f4f6',
+                                        borderRadius: '9999px',
+                                        fontSize: '0.875rem',
+                                        color: '#374151'
+                                    }}>
+                                        {category}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Added top events display */}
+                    {stats?.topEvents && stats.topEvents.length > 0 && (
+                        <div>
+                            <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                Sự Kiện Hàng Đầu
+                            </h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                {stats.topEvents.map((event: any) => (
+                                    <div key={event.id} style={{
+                                        padding: '0.75rem',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '6px',
+                                        backgroundColor: '#f9fafb'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontWeight: '500' }}>{event.name}</span>
+                                            <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                                                🎫 {event.ticketsSold || 0} vé
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {(!stats?.eventCategories || stats.eventCategories.length === 0) &&
+                        (!stats?.topEvents || stats.topEvents.length === 0) && (
+                            <p style={{ color: '#6b7280' }}>
+                                Tính năng phân tích chi tiết đang được phát triển...
+                            </p>
+                        )}
                 </div>
             )}
         </div>

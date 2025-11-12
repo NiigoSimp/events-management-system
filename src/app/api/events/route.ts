@@ -1,155 +1,81 @@
-import { NextResponse } from 'next/server'
-import clientPromise from '@/lib/mongodb'
-import { ObjectId } from 'mongodb'
+import { NextRequest, NextResponse } from 'next/server'
+import { SQLServices } from '../../../../services/SQLServices'
 
-
-interface EventDocument {
-    _id: ObjectId
-    name: string
-    date: string
-    location: string
-    description: string
-    category: string
-    ticketPrice: number
-    maxAttendees: number  // Add this field
-    status: string
-    createdAt: Date
+// Define types for the event object
+interface SQLEvent {
+    EventID: number;
+    EventName: string;
+    StartDate: string;
+    Location: string;
+    Description?: string;
+    Category: string;
+    Status?: string;
+    OrganizerName: string;
+    TicketsSold?: number;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
-        const client = await clientPromise
-        const db = client.db('event-management')
-        console.log('Fetching events from database...')
+        const { searchParams } = new URL(request.url)
+        const category = searchParams.get('category')
+        const location = searchParams.get('location')
+        const query = searchParams.get('q')
 
-        const events = await db.collection<EventDocument>('events').find({}).sort({ date: 1 }).toArray()
-        console.log(`Found ${events.length} events`)
+        console.log('Searching events in SQL Server:', { category, location, query })
+
+        let events: SQLEvent[] = []
+
+        // You need to implement these methods in your SQLServices class
+        if (category && location) {
+            // Tìm theo category và location
+            events = await SQLServices.searchEvents(category, location)
+        } else if (category) {
+            // Tìm tất cả events và filter theo category
+            const allEvents = await SQLServices.getUpcomingEvents()
+            events = allEvents.filter((event: SQLEvent) =>
+                event.Category.toLowerCase().includes(category.toLowerCase())
+            )
+        } else if (location) {
+            // Tìm tất cả events và filter theo location
+            const allEvents = await SQLServices.getUpcomingEvents()
+            events = allEvents.filter((event: SQLEvent) =>
+                event.Location.toLowerCase().includes(location.toLowerCase())
+            )
+        } else if (query) {
+            // Tìm kiếm text trong name và description
+            const allEvents = await SQLServices.getUpcomingEvents()
+            events = allEvents.filter((event: SQLEvent) =>
+                event.EventName.toLowerCase().includes(query.toLowerCase()) ||
+                (event.Description && event.Description.toLowerCase().includes(query.toLowerCase()))
+            )
+        } else {
+            // Trả về tất cả events nếu không có search criteria
+            events = await SQLServices.getUpcomingEvents()
+        }
 
         const serializedEvents = events.map(event => ({
-            id: event._id.toString(),
-            name: event.name,
-            date: event.date,
-            location: event.location,
-            description: event.description,
-            category: event.category,
-            ticketPrice: event.ticketPrice,
-            maxAttendees: event.maxAttendees,  // Add this field
-            status: event.status,
-            createdAt: event.createdAt.toISOString()
+            id: event.EventID.toString(),
+            name: event.EventName,
+            date: event.StartDate,
+            location: event.Location,
+            description: event.Description || "",
+            category: event.Category || "Technology",
+            status: event.Status?.toLowerCase() || "active",
+            organizer: event.OrganizerName,
+            ticketsSold: event.TicketsSold || 0
         }))
 
         return NextResponse.json({
             success: true,
-            data: serializedEvents
+            data: serializedEvents,
+            count: serializedEvents.length
         })
-    } catch (error) {
-        console.error('MongoDB error:', error)
-        return NextResponse.json({
-            success: false,
-            error: 'Failed to fetch events from database'
-        }, { status: 500 })
-    }
-}
-
-export async function POST(request: Request) {
-    try {
-        const client = await clientPromise
-        const db = client.db('event-management')
-        const body = await request.json()
-
-        console.log('Received event data:', body)
-
-        // Add maxAttendees to required fields validation
-        if (!body.name || !body.date || !body.location || !body.maxAttendees) {
-            return NextResponse.json({
-                success: false,
-                error: "Missing required fields: name, date, location, maxAttendees"
-            }, { status: 400 })
-        }
-
-        let formattedDate = body.date;
-        try {
-            const date = new Date(body.date);
-            if (isNaN(date.getTime())) {
-                throw new Error('Invalid date');
-            }
-            formattedDate = date.toISOString();
-        } catch (error) {
-            return NextResponse.json({
-                success: false,
-                error: "Invalid date format. Use YYYY-MM-DD or ISO format"
-            }, { status: 400 })
-        }
-
-        const ticketPrice = Number(body.ticketPrice);
-        if (isNaN(ticketPrice)) {
-            return NextResponse.json({
-                success: false,
-                error: "ticketPrice must be a valid number"
-            }, { status: 400 })
-        }
-
-        // Validate maxAttendees
-        const maxAttendees = Number(body.maxAttendees);
-        if (isNaN(maxAttendees) || maxAttendees < 1) {
-            return NextResponse.json({
-                success: false,
-                error: "maxAttendees must be a valid number greater than 0"
-            }, { status: 400 })
-        }
-
-        // Add maxAttendees to new event object
-        const newEvent = {
-            name: body.name.trim(),
-            date: formattedDate,
-            location: body.location.trim(),
-            description: body.description?.trim() || "",
-            category: body.category?.trim() || "Technology",
-            ticketPrice: ticketPrice,
-            maxAttendees: maxAttendees,  // Add this field
-            status: "active",
-            createdAt: new Date()
-        }
-
-        console.log('Inserting event:', newEvent)
-        const result = await db.collection('events').insertOne(newEvent)
-        console.log('Insert result:', result)
-
-        return NextResponse.json({
-            success: true,
-            data: {
-                id: result.insertedId.toString(),
-                ...newEvent,
-                createdAt: newEvent.createdAt.toISOString()
-            }
-        }, { status: 201 })
 
     } catch (error) {
-        console.error('MongoDB error:', error)
+        console.error('SQL Server error:', error)
         return NextResponse.json({
             success: false,
-            error: 'Failed to create event in database'
-        }, { status: 500 })
-    }
-}
-
-export async function DELETE() {
-    try {
-        const client = await clientPromise
-        const db = client.db('event-management')
-        const result = await db.collection('events').deleteMany({})
-
-        console.log(`Deleted ${result.deletedCount} events`)
-
-        return NextResponse.json({
-            success: true,
-            deletedCount: result.deletedCount
-        })
-    } catch (error) {
-        console.error('MongoDB error:', error)
-        return NextResponse.json({
-            success: false,
-            error: 'Failed to delete events'
+            error: 'Failed to search events'
         }, { status: 500 })
     }
 }

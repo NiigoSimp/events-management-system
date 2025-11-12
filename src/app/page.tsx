@@ -105,7 +105,7 @@ export default function HomePage() {
                 alt="Loading"
                 style={{ width: '64px', height: '64px' }}
             />
-            🌀 Đang tải sự kiện...
+             Đang tải sự kiện...
         </div>
     )
 
@@ -462,11 +462,6 @@ export default function HomePage() {
                     padding: '4rem 2rem',
                     color: '#6b7280'
                 }}>
-                    <img
-                        src={ICONS.empty}
-                        alt="No events"
-                        style={{ width: '96px', height: '96px', marginBottom: '1rem', opacity: 0.5 }}
-                    />
                     <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
                         Không tìm thấy sự kiện
                     </h3>

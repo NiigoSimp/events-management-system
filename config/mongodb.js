@@ -1,8 +1,6 @@
-// SIMPLE database connection - remove all complex code
 import {MongoClient} from "mongodb";
 
 
-// Your MongoDB Atlas connection string from the dashboard
 const uri = "mongodb+srv://eventmanagementuser:zâzzazamuza@cluster0.qzzflwg.mongodb.net/?appName=Cluster0";
 
 let db = null;
@@ -15,11 +13,11 @@ async function connectDB() {
         await client.connect();
 
         db = client.db('EventManagement'); // Specify your database name
-        console.log('✅ Connected to MongoDB successfully!');
+        console.log('Connected to MongoDB successfully!');
 
         return db;
     } catch (error) {
-        console.error('❌ MongoDB connection failed:', error.message);
+        console.error('MongoDB connection failed:', error.message);
         throw error;
     }
 }
