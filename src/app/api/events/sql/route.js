@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { SQLServices } from '../../../../../services/SQLServices';
+import { SQLServices } from '../../../../../services/sqlServices';
 
 export async function GET(request) {
     try {
