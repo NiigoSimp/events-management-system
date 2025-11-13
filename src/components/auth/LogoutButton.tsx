@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { useAuth } from '@/components/lib/auth/useAuth';
+import { useAuth } from '../lib/auth/useAuth';
 
 interface LogoutButtonProps {
     variant?: 'default' | 'minimal' | 'icon';
@@ -13,7 +13,8 @@ export default function LogoutButton({
                                          className = '',
                                          showConfirmation = true
                                      }: LogoutButtonProps) {
-    const { user, logout, isAdmin } = useAuth();
+    const { user, logout } = useAuth();
+    const isAdmin = user?.role === 'admin'; // Keep this local calculation
     const [showModal, setShowModal] = useState(false);
 
     const handleLogout = () => {
@@ -27,7 +28,6 @@ export default function LogoutButton({
     const performLogout = () => {
         logout();
         setShowModal(false);
-        // Optional: redirect to home page after logout
         window.location.href = '/';
     };
 

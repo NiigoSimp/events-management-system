@@ -1,5 +1,5 @@
 'use client';
-import { useRouteGuard } from '@/components/lib/auth/useAuth';
+import { useRouteGuard } from '../lib/auth/useRouteGuard';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 

@@ -1,244 +1,160 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { AuthContext } from './AuthContext';
-import { User, AuthContextType } from './AuthContext';
-import { ADMIN_ACCOUNT, DEMO_USERS, AUTH_CONFIG, USER_ROLES, PERMISSIONS, ROUTES, UserRole } from './constants';
 
-interface AuthProviderProps {
-    children: React.ReactNode;
+import React, { createContext, useState, ReactNode, useEffect } from 'react';
+
+export interface User {
+    id: string;
+    name: string;
+    email: string;
+    role: 'admin' | 'user';
 }
 
-interface StoredUserData {
-    user: User;
-    timestamp: number;
+interface LoginCredentials {
+    email: string;
+    password: string;
+}
+
+interface RegisterCredentials {
+    name: string;
+    email: string;
+    password: string;
+    confirmPassword?: string;
+}
+
+interface AuthContextType {
+    user: User | null;
+    login: (credentials: LoginCredentials) => Promise<void>;
+    register: (credentials: RegisterCredentials) => Promise<void>;
+    logout: () => void;
+    isLoading: boolean;
+    error: string | null;
+    isAuthenticated: boolean;
+}
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthProviderProps {
+    children: ReactNode;
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    // Check if session is valid
-    const isSessionValid = useCallback((timestamp: number): boolean => {
-        return Date.now() - timestamp < AUTH_CONFIG.SESSION_DURATION;
-    }, []);
+    // Mock authentication for development
+    const mockUsers: User[] = [
+        { id: '1', name: 'Admin User', email: 'admin@demo.com', role: 'admin' },
+        { id: '2', name: 'Regular User', email: 'user@demo.com', role: 'user' }
+    ];
 
-    // Find user by email and password
-    const findUserByCredentials = useCallback((email: string, password: string): User | null => {
-        const normalizedEmail = email.toLowerCase().trim();
+    const login = async (credentials: LoginCredentials): Promise<void> => {
+        setIsLoading(true);
+        setError(null);
 
-        console.log('Checking credentials:', { email: normalizedEmail, password });
-
-        // Check admin account
-        if (normalizedEmail === ADMIN_ACCOUNT.email.toLowerCase() && password === ADMIN_ACCOUNT.password) {
-            console.log('Admin login successful');
-            return {
-                id: ADMIN_ACCOUNT.id,
-                email: ADMIN_ACCOUNT.email,
-                name: ADMIN_ACCOUNT.name,
-                role: USER_ROLES.ADMIN as UserRole,
-                permissions: ADMIN_ACCOUNT.permissions,
-                department: ADMIN_ACCOUNT.department,
-                phone: ADMIN_ACCOUNT.phone,
-                avatar: ADMIN_ACCOUNT.avatar,
-                lastLogin: new Date().toISOString(),
-                createdAt: ADMIN_ACCOUNT.createdAt,
-                isActive: ADMIN_ACCOUNT.isActive,
-                isVerified: ADMIN_ACCOUNT.isVerified
-            };
-        }
-
-        // Check demo users
-        const demoUser = DEMO_USERS.find(
-            user => user.email.toLowerCase() === normalizedEmail && user.password === password
-        );
-
-        if (demoUser) {
-            console.log('Demo user login successful:', demoUser.email);
-            return {
-                id: demoUser.id,
-                email: demoUser.email,
-                name: demoUser.name,
-                role: USER_ROLES.USER as UserRole,
-                permissions: demoUser.permissions,
-                lastLogin: new Date().toISOString(),
-                createdAt: demoUser.createdAt,
-                isActive: demoUser.isActive,
-                isVerified: demoUser.isVerified
-            };
-        }
-
-        console.log('Login failed: Invalid credentials');
-        return null;
-    }, []);
-
-    // Check if user has specific permission
-    const hasPermission = useCallback((permission: string): boolean => {
-        if (!user) return false;
-
-        if (user.permissions.includes(PERMISSIONS.ALL)) {
-            return true;
-        }
-
-        return user.permissions.includes(permission);
-    }, [user]);
-
-    // Check if user can access specific route
-    const canAccessRoute = useCallback((route: string): boolean => {
-        if (!user) return false;
-
-        // Public routes are accessible to everyone
-        if (ROUTES.PUBLIC.includes(route as any)) return true;
-
-        // Check protected routes
-        if (ROUTES.PROTECTED.includes(route as any)) {
-            return user.role === USER_ROLES.USER || user.role === USER_ROLES.ADMIN;
-        }
-
-        // Check admin routes
-        if (ROUTES.ADMIN.some((r: string) => route.startsWith(r))) {
-            return user.role === USER_ROLES.ADMIN;
-        }
-
-        return false;
-    }, [user]);
-
-    // Initialize auth from storage
-    const initializeAuth = useCallback(() => {
         try {
-            const storedData = localStorage.getItem(AUTH_CONFIG.STORAGE_KEY);
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
-            if (!storedData) {
-                setLoading(false);
-                return;
+            const foundUser = mockUsers.find(u => u.email === credentials.email);
+
+            if (foundUser && credentials.password === 'password') {
+                setUser(foundUser);
+                localStorage.setItem('authToken', 'mock-token');
+                localStorage.setItem('user', JSON.stringify(foundUser));
+            } else {
+                throw new Error('Invalid email or password');
             }
 
-            const parsedData: StoredUserData = JSON.parse(storedData);
-
-            if (!isSessionValid(parsedData.timestamp)) {
-                localStorage.removeItem(AUTH_CONFIG.STORAGE_KEY);
-                setLoading(false);
-                return;
-            }
-
-            setUser(parsedData.user);
-        } catch (error) {
-            console.error('Auth initialization error:', error);
-            localStorage.removeItem(AUTH_CONFIG.STORAGE_KEY);
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Login failed';
+            setError(errorMessage);
+            throw err;
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
-    }, [isSessionValid]);
+    };
 
-    // Login function với password check
-    const loginWithCredentials = useCallback((email: string, password: string): boolean => {
-        const userData = findUserByCredentials(email, password);
+    const register = async (credentials: RegisterCredentials): Promise<void> => {
+        setIsLoading(true);
+        setError(null);
 
-        if (!userData) {
-            return false; // Login failed
-        }
+        try {
+            if (credentials.confirmPassword && credentials.password !== credentials.confirmPassword) {
+                throw new Error('Passwords do not match');
+            }
 
-        const storedData: StoredUserData = {
-            user: userData,
-            timestamp: Date.now()
-        };
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
-        localStorage.setItem(AUTH_CONFIG.STORAGE_KEY, JSON.stringify(storedData));
-        setUser(userData);
-        return true; // Login success
-    }, [findUserByCredentials]);
-
-    // Simple login function for components
-    const login = useCallback((userData: User) => {
-        const storedData: StoredUserData = {
-            user: userData,
-            timestamp: Date.now()
-        };
-        localStorage.setItem(AUTH_CONFIG.STORAGE_KEY, JSON.stringify(storedData));
-        setUser(userData);
-    }, []);
-
-    // Update profile function
-    const updateProfile = useCallback((userData: Partial<User>) => {
-        if (!user) return;
-
-        const updatedUser = {
-            ...user,
-            ...userData
-        };
-
-        const storedData = localStorage.getItem(AUTH_CONFIG.STORAGE_KEY);
-        if (storedData) {
-            const parsedData: StoredUserData = JSON.parse(storedData);
-            const updatedStoredData: StoredUserData = {
-                ...parsedData,
-                user: updatedUser
+            const newUser: User = {
+                id: Date.now().toString(),
+                name: credentials.name,
+                email: credentials.email,
+                role: 'user'
             };
-            localStorage.setItem(AUTH_CONFIG.STORAGE_KEY, JSON.stringify(updatedStoredData));
+
+            setUser(newUser);
+            localStorage.setItem('authToken', 'mock-token');
+            localStorage.setItem('user', JSON.stringify(newUser));
+
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Registration failed';
+            setError(errorMessage);
+            throw err;
+        } finally {
+            setIsLoading(false);
         }
+    };
 
-        setUser(updatedUser);
-    }, [user]);
-
-    // Logout function
-    const logout = useCallback(() => {
-        localStorage.removeItem(AUTH_CONFIG.STORAGE_KEY);
+    const logout = () => {
         setUser(null);
-    }, []);
+        setError(null);
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+    };
 
-    // Initialize auth on mount
+    // Check for existing auth on app load
     useEffect(() => {
-        initializeAuth();
+        const checkAuthStatus = async () => {
+            try {
+                if (typeof window === 'undefined') {
+                    setIsLoading(false);
+                    return;
+                }
 
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === AUTH_CONFIG.STORAGE_KEY) {
-                initializeAuth();
+                const token = localStorage.getItem('authToken');
+                const userData = localStorage.getItem('user');
+
+                if (token && userData) {
+                    const user = JSON.parse(userData);
+                    setUser(user);
+                }
+            } catch (err) {
+                console.error('Auth check failed:', err);
+                localStorage.removeItem('authToken');
+                localStorage.removeItem('user');
+            } finally {
+                setIsLoading(false);
             }
         };
 
-        window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
-    }, [initializeAuth]);
+        checkAuthStatus();
+    }, []);
 
-    // Auto-logout when session expires
-    useEffect(() => {
-        if (!user) return;
-
-        const checkSession = setInterval(() => {
-            const storedData = localStorage.getItem(AUTH_CONFIG.STORAGE_KEY);
-            if (storedData) {
-                const parsedData: StoredUserData = JSON.parse(storedData);
-                if (!isSessionValid(parsedData.timestamp)) {
-                    logout();
-                }
-            }
-        }, 60000); // Check every minute
-
-        return () => clearInterval(checkSession);
-    }, [user, isSessionValid, logout]);
-
-    const contextValue: AuthContextType & { loginWithCredentials: (email: string, password: string) => boolean } = {
-        // User data
+    const value: AuthContextType = {
         user,
-        isAdmin: user?.role === USER_ROLES.ADMIN,
-        isAuthenticated: !!user,
-        loading,
-
-        // Auth methods
         login,
+        register,
         logout,
-        updateProfile,
-
-        // Permission methods
-        hasPermission,
-        canAccessRoute,
-
-        // New method for credential login
-        loginWithCredentials
+        isLoading,
+        error,
+        isAuthenticated: !!user,
     };
 
     return (
-        <AuthContext.Provider value={contextValue}>
+        <AuthContext.Provider value={value}>
             {children}
         </AuthContext.Provider>
     );
 }
+
+export default AuthProvider;
